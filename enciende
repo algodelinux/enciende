@@ -1,0 +1,37 @@
+#!/bin/bash
+#
+# enciende: Script para encender equipos en la red del centro
+#
+# Funcionamiento:
+# * Es necesario introducir el nombre de la máquina como parámetro.
+# * Si no se introduce el nombre como parámetro, mostrará un mensaje informativo con la sintaxis del comando.
+# * Primero se busca la MAC del equipo en LDAP y si se encuentra, se enciende
+# * Si no se encuentra, se busca en en ficheros csv que almacenan el nombre del host y su mac
+#
+# Esteban M. Navas <algodelinux@gmail.com>
+# Fecha creación:      09/10/2013
+# Última modificación: 08/05/2019
+
+# Comprobamos si se ha introducido un parámetro
+if [ $# -lt 1 ]; then
+   echo "ERROR: Debe especificar el nombre del equipo a encender"
+   echo "Sintaxis: $0 nombreequipo"
+   exit
+fi
+
+EQUIPO=$1
+
+MAC=`ldapsearch -xLLL -h ldap -b "dc=instituto,dc=extremadura,dc=es" cn=$EQUIPO | grep dhcpHWAddress|cut -f3 -d" "`
+
+if [ ! $MAC ]; then
+   MAC=`find /etc/dsh/group/ -name "*.hosts" | xargs grep $EQUIPO.local | cut -f2 -d";"`
+   if [ ! $MAC ]; then
+      echo "No existe ningún equipo con el nombre $EQUIPO."
+   else
+      echo "Vamos a encender el equipo $EQUIPO con mac $MAC."
+      wakeonlan -i 192.168.103.255 $MAC
+   fi
+else
+   echo "Vamos a encender el equipo $EQUIPO con mac $MAC."
+   wakeonlan -i 172.19.145.255 $MAC
+fi
